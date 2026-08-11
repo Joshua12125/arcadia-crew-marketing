@@ -89,6 +89,8 @@ async function runScan() {
   document.getElementById('scoreMobile').textContent = '–';
   document.getElementById('scoreDesktop').textContent = '–';
   document.getElementById('scoreOnpage').textContent = '–';
+  document.getElementById('scoreOverall').textContent = '–';
+  document.getElementById('overallNote').textContent = '';
   document.getElementById('onpageList').innerHTML = '';
 
   const results = await Promise.allSettled([
@@ -134,7 +136,37 @@ async function runScan() {
     return;
   }
 
+  renderOverall({
+    mobile: mobileRes.status === 'fulfilled' ? mobileRes.value : null,
+    desktop: desktopRes.status === 'fulfilled' ? desktopRes.value : null,
+    onpage: onpageRes.status === 'fulfilled' ? onpageRes.value.score : null
+  });
+
   report.classList.add('show');
+}
+
+function renderOverall({ mobile, desktop, onpage }) {
+  // Weighted: on-page content signals matter most for SEO, speed is a
+  // secondary ranking factor. If a piece is missing (e.g. proxy blocked),
+  // the average is taken over whatever actually came back.
+  const parts = [];
+  if (onpage !== null) parts.push({ value: onpage, weight: 2 });
+  if (mobile !== null) parts.push({ value: mobile, weight: 1 });
+  if (desktop !== null) parts.push({ value: desktop, weight: 1 });
+
+  const totalWeight = parts.reduce((s, p) => s + p.weight, 0);
+  const overall = Math.round(parts.reduce((s, p) => s + p.value * p.weight, 0) / totalWeight);
+
+  setScore('scoreOverall', overall);
+
+  const note = document.getElementById('overallNote');
+  const missing = [];
+  if (mobile === null) missing.push('mobile speed');
+  if (desktop === null) missing.push('desktop speed');
+  if (onpage === null) missing.push('on-page scan');
+  note.textContent = missing.length
+    ? `Based on the checks that completed — ${missing.join(' and ')} couldn't be reached this time.`
+    : 'Based on on-page content (weighted higher) and mobile/desktop speed.';
 }
 
 function setScore(elId, score) {
