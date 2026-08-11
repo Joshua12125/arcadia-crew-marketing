@@ -183,7 +183,7 @@ async function fetchPageSpeed(url, strategy) {
 
   let res;
   try {
-    res = await fetchWithTimeout(endpoint, 25000);
+    res = await fetchWithTimeout(endpoint, 18000);
   } catch (e) {
     throw new Error(e.name === 'AbortError' ? 'timed out' : 'network error reaching Google');
   }
@@ -201,7 +201,7 @@ async function fetchOnPage(url) {
   // proxy's IP. Falls back to public proxies only if /api/scan isn't
   // available (e.g. running the static files without Vercel).
   try {
-    const res = await fetchWithTimeout(`/api/scan?url=${encodeURIComponent(url)}`, 15000);
+    const res = await fetchWithTimeout(`/api/scan?url=${encodeURIComponent(url)}`, 10000);
     if (res.ok) {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -217,29 +217,28 @@ async function fetchOnPage(url) {
 async function fetchOnPageViaProxy(url) {
   // Uses public read-only CORS proxies since most sites don't send
   // Access-Control-Allow-Origin headers for direct browser fetches.
-  // Tries a primary proxy, then a fallback, since free proxies are flaky.
+  // Races both proxies at once (instead of one after another) so a
+  // slow/dead proxy doesn't double the wait.
   const proxies = [
     `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     `https://corsproxy.io/?url=${encodeURIComponent(url)}`
   ];
 
-  let html = null;
-  let lastError = null;
+  const attempts = proxies.map(async (proxied) => {
+    const res = await fetchWithTimeout(proxied, 10000);
+    if (!res.ok) throw new Error(`proxy returned ${res.status}`);
+    const html = await res.text();
+    if (!html || html.length < 200) throw new Error('proxy returned an empty page');
+    return html;
+  });
 
-  for (const proxied of proxies) {
-    try {
-      const res = await fetchWithTimeout(proxied, 20000);
-      if (!res.ok) { lastError = `proxy returned ${res.status}`; continue; }
-      html = await res.text();
-      if (html && html.length > 200) break;
-      lastError = 'proxy returned an empty page';
-      html = null;
-    } catch (e) {
-      lastError = e.name === 'AbortError' ? 'proxy timed out' : 'proxy unreachable';
-    }
+  let html;
+  try {
+    html = await Promise.any(attempts);
+  } catch (aggregate) {
+    const reason = aggregate.errors?.[0]?.message || 'could not fetch page HTML';
+    throw new Error(reason);
   }
-
-  if (!html) throw new Error(lastError || 'could not fetch page HTML');
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
@@ -342,57 +341,49 @@ function renderOnPageError() {
   list.innerHTML = '<li>Couldn\'t fetch the page HTML directly — some sites block outside requests. Speed scores above still reflect Google\'s own data.</li>';
 }
 
-// ---- Rank tracking: best-effort client-side attempt ----
+// ---- Rank tracking: server-side, no key required from the visitor ----
 async function runRankCheck() {
   const note = document.getElementById('rankNote');
-  const key = document.getElementById('rankKey').value.trim();
+  const domain = document.getElementById('rankDomain').value.trim();
   const keyword = document.getElementById('rankKeyword').value.trim();
 
-  if (!key || !keyword) {
-    note.textContent = 'Add both an API key and a target keyword to check a position.';
+  if (!domain || !keyword) {
+    note.textContent = 'Add your domain and a target keyword to check a position.';
     return;
   }
 
   note.textContent = 'Checking…';
   try {
-    // Most SERP-data providers block direct browser requests (CORS) by
-    // design, since exposing a paid key in client-side JS isn't secure.
-    // This attempt will typically fail in-browser — real rank tracking
-    // needs a small server-side endpoint holding the key instead.
-    const res = await fetch(`https://serpapi.com/search.json?q=${encodeURIComponent(keyword)}&api_key=${encodeURIComponent(key)}`);
-    if (!res.ok) throw new Error('blocked');
-    await res.json();
-    note.textContent = 'Provider responded — wire this result into your report as needed.';
+    const res = await fetchWithTimeout(`/api/rank?domain=${encodeURIComponent(domain)}&keyword=${encodeURIComponent(keyword)}`, 15000);
+    const data = await res.json();
+    if (data.error) { note.textContent = data.error; return; }
+    note.textContent = data.found
+      ? `Ranking #${data.position} for "${data.keyword}" (checked top ${data.checkedResults} results).`
+      : `Not found in the top ${data.checkedResults} results for "${data.keyword}".`;
   } catch (e) {
-    note.textContent = 'This provider blocks direct browser requests (expected — API keys shouldn\'t live in client-side code). Rank tracking needs a small backend endpoint; we set this up as part of paid engagements.';
+    note.textContent = e.name === 'AbortError' ? 'Timed out — try again.' : 'Could not check that position right now.';
   }
 }
 
 async function runGbpCheck() {
   const note = document.getElementById('gbpNote');
-  const key = document.getElementById('gbpKey').value.trim();
   const business = document.getElementById('gbpBusiness').value.trim();
   const keyword = document.getElementById('gbpKeyword').value.trim();
 
-  if (!key || !business || !keyword) {
-    note.textContent = 'Add an API key, your business name, and a target keyword to check a local position.';
+  if (!business || !keyword) {
+    note.textContent = 'Add your business name and a target keyword to check a local position.';
     return;
   }
 
   note.textContent = 'Checking…';
   try {
-    // Same constraint as rank tracking above: local-pack/Maps search-data
-    // providers don't allow direct browser requests with a live key.
-    // This is a best-effort attempt — expect it to fail client-side.
-    const res = await fetch(`https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)}&api_key=${encodeURIComponent(key)}`);
-    if (!res.ok) throw new Error('blocked');
+    const res = await fetchWithTimeout(`/api/gbp?business=${encodeURIComponent(business)}&keyword=${encodeURIComponent(keyword)}`, 15000);
     const data = await res.json();
-    const results = data?.local_results || [];
-    const match = results.findIndex(r => (r.title || '').toLowerCase().includes(business.toLowerCase()));
-    note.textContent = match >= 0
-      ? `Found at local pack position ${match + 1} for "${keyword}".`
-      : `Not found in the top local results returned for "${keyword}".`;
+    if (data.error) { note.textContent = data.error; return; }
+    note.textContent = data.found
+      ? `Local pack position #${data.position} for "${data.keyword}".`
+      : `Not found in the local results returned for "${data.keyword}".`;
   } catch (e) {
-    note.textContent = 'This provider blocks direct browser requests (expected — API keys shouldn\'t live in client-side code). Grid-based local rank tracking needs a small backend endpoint; we set this up as part of local SEO engagements.';
+    note.textContent = e.name === 'AbortError' ? 'Timed out — try again.' : 'Could not check that position right now.';
   }
 }
