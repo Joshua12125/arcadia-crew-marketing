@@ -38,12 +38,18 @@
         <input type="text" id="urlInput" placeholder="yourwebsite.com" autocomplete="off">
         <button class="btn btn-primary" id="scanBtn" type="button">Run scan →</button>
       </div>
-      <p class="tool-note">On-page checks are fetched live from the URL. Speed scores come directly from Google PageSpeed Insights. Some sites block outside fetch requests — if the on-page scan can't reach a site, the speed score will still run.</p>
+      <p class="tool-note">On-page checks are fetched live from the URL. Speed scores come directly from Google PageSpeed Insights — a real page-load audit, so this takes roughly 10–20 seconds, not instant.</p>
 
-      <div class="loading" id="loadingRow"><span class="spinner"></span> Surveying the terrain — this can take up to 30 seconds…</div>
+      <div class="loading" id="loadingRow"><span class="spinner"></span> Surveying the terrain — usually 10–20 seconds…</div>
       <div class="error-box" id="errorBox"></div>
 
       <div class="report" id="report">
+
+        <div class="score-card" id="overallCard" style="margin-bottom:20px; padding:28px;">
+          <div class="score" id="scoreOverall" style="font-size:3.4rem;">–</div>
+          <div class="lbl">Overall SEO score</div>
+          <p class="tool-note" id="overallNote" style="margin-top:10px;"></p>
+        </div>
 
         <div class="report-grid">
           <div class="score-card">
@@ -75,30 +81,15 @@
     <div class="section-head">
       <p class="eyebrow">Google ranking</p>
       <h2>Track where you actually sit in search.</h2>
-      <p class="lede">Live rank-position checking requires a paid search-data API (we use provider keys like SerpApi or DataForSEO on client engagements) because Google doesn't allow this to run reliably or fairly from a browser. Two ways to get it:</p>
+      <p class="lede">Enter your domain and a target keyword to check your current organic position on Google.</p>
     </div>
-    <div class="grid-2">
-      <div class="card">
-        <span class="tag">Self-serve</span>
-        <h3>Bring your own API key</h3>
-        <p>If you already hold a rank-tracking API key, paste it below with your domain and target keyword. The key stays in this browser tab only — it's never sent to Arcadia Crew Marketing.</p>
-        <div class="field-row" style="margin-top:16px;">
-          <input type="text" id="rankKey" placeholder="API key (e.g. SerpApi)">
-        </div>
-        <div class="field-row" style="margin-top:10px;">
-          <input type="text" id="rankKeyword" placeholder="Target keyword">
-        </div>
-        <div style="margin-top:14px;">
-          <button class="btn btn-ghost" id="rankBtn" type="button">Check position</button>
-        </div>
-        <p class="tool-note" id="rankNote">Not configured yet — see the note above.</p>
+    <div class="tool-panel">
+      <div class="field-row">
+        <input type="text" id="rankDomain" placeholder="yourwebsite.com">
+        <input type="text" id="rankKeyword" placeholder="Target keyword">
+        <button class="btn btn-primary" id="rankBtn" type="button">Check position →</button>
       </div>
-      <div class="card">
-        <span class="tag">Managed</span>
-        <h3>We set it up for you</h3>
-        <p>On paid engagements, Arcadia Crew Marketing configures and maintains rank tracking as part of the build — no key management on your end, results reviewed with you on a schedule.</p>
-        <a href="contact.html" class="btn btn-primary" style="margin-top:16px;">Ask about rank tracking →</a>
-      </div>
+      <p class="tool-note" id="rankNote"></p>
     </div>
   </div>
 </section>
@@ -110,34 +101,26 @@
     <div class="section-head">
       <p class="eyebrow">Google Business Profile</p>
       <h2>Where you sit in the local map pack.</h2>
-      <p class="lede">Straight answer: Google doesn't expose local-pack position through any official API — that's deliberate, to stop exactly this kind of automated checking. Tools that do this (LocalFalcon, BrightLocal, and similar) all run on paid third-party search-data APIs that simulate searches from multiple points around a location. Same two paths as ranking above:</p>
+      <p class="lede">Enter your business name and a target keyword to check your current local pack position.</p>
     </div>
-    <div class="grid-2">
-      <div class="card">
-        <span class="tag">Self-serve</span>
-        <h3>Bring your own API key</h3>
-        <p>If you hold a local-search API key (SerpApi's Google Maps engine, DataForSEO, etc.), paste it with your business name and target keyword. The key stays in this browser tab only.</p>
-        <div class="field-row" style="margin-top:16px;">
-          <input type="text" id="gbpKey" placeholder="API key (e.g. SerpApi)">
-        </div>
-        <div class="field-row" style="margin-top:10px;">
-          <input type="text" id="gbpBusiness" placeholder="Business name">
-        </div>
-        <div class="field-row" style="margin-top:10px;">
-          <input type="text" id="gbpKeyword" placeholder="Target keyword (e.g. house cleaning Cambridge MA)">
-        </div>
-        <div style="margin-top:14px;">
-          <button class="btn btn-ghost" id="gbpBtn" type="button">Check local position</button>
-        </div>
-        <p class="tool-note" id="gbpNote">Not configured yet — see the note above.</p>
+    <div class="tool-panel">
+      <div class="field-row">
+        <input type="text" id="gbpBusiness" placeholder="Business name">
+        <input type="text" id="gbpKeyword" placeholder="Target keyword (e.g. house cleaning Cambridge MA)">
+        <button class="btn btn-primary" id="gbpBtn" type="button">Check local position →</button>
       </div>
-      <div class="card">
-        <span class="tag">Managed</span>
-        <h3>We set it up for you</h3>
-        <p>On paid engagements, Arcadia Crew Marketing runs proper grid-based local rank tracking — multiple simulated search points around your service area, tracked over time — as part of local SEO work.</p>
-        <a href="contact.html" class="btn btn-primary" style="margin-top:16px;">Ask about local rank tracking →</a>
-      </div>
+      <p class="tool-note" id="gbpNote"></p>
     </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section class="tight" style="text-align:center;">
+  <div class="wrap">
+    <h2>Want this tracked over time?</h2>
+    <p class="lede" style="margin:0 auto 26px;">On paid engagements, Arcadia Crew Marketing sets up scheduled rank and local-pack tracking, reviewed with you on a regular cadence.</p>
+    <a href="contact.html" class="btn btn-ghost">Ask about ongoing tracking →</a>
   </div>
 </section>
 
