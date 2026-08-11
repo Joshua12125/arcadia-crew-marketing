@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free SEO, Speed &amp; Ranking Audit — Arcadia Crew Marketing</title>
+<meta name="description" content="Run a free on-page SEO, off-page, PageSpeed, and Google ranking audit on any website with Arcadia Crew Marketing's diagnostic tool.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">Arcadia Crew <span>Marketing</span></a>
+    <nav class="links">
+      <a href="index.html">Home</a>
+      <a href="tools.html" class="active">SEO Tools</a>
+      <a href="services.html">Services</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <a href="contact.html" class="nav-cta">Book a build</a>
+  </div>
+</header>
+
+<section class="hero" style="padding-bottom:30px;">
+  <div class="wrap" style="max-width:760px;">
+    <p class="eyebrow">Free diagnostic tool</p>
+    <h1>Survey any site's SEO, speed, and structure — free.</h1>
+    <p class="lede">Enter a URL and this runs real checks: an on-page content scan against the live HTML, and a PageSpeed Insights read on mobile and desktop load performance. No signup, no fake numbers.</p>
+  </div>
+</section>
+
+<section class="tight" style="padding-top:0;">
+  <div class="wrap">
+    <div class="tool-panel">
+      <div class="field-row">
+        <input type="text" id="urlInput" placeholder="yourwebsite.com" autocomplete="off">
+        <button class="btn btn-primary" id="scanBtn" type="button">Run scan →</button>
+      </div>
+      <p class="tool-note">On-page checks are fetched live from the URL. Speed scores come directly from Google PageSpeed Insights. Some sites block outside fetch requests — if the on-page scan can't reach a site, the speed score will still run.</p>
+
+      <div class="loading" id="loadingRow"><span class="spinner"></span> Surveying the terrain — this can take up to 30 seconds…</div>
+      <div class="error-box" id="errorBox"></div>
+
+      <div class="report" id="report">
+
+        <div class="report-grid">
+          <div class="score-card">
+            <div class="score" id="scoreMobile">–</div>
+            <div class="lbl">Mobile speed</div>
+          </div>
+          <div class="score-card">
+            <div class="score" id="scoreDesktop">–</div>
+            <div class="lbl">Desktop speed</div>
+          </div>
+          <div class="score-card">
+            <div class="score" id="scoreOnpage">–</div>
+            <div class="lbl">On-page score</div>
+          </div>
+        </div>
+
+        <h3>On-page findings</h3>
+        <ul class="check-list" id="onpageList"></ul>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Google ranking</p>
+      <h2>Track where you actually sit in search.</h2>
+      <p class="lede">Live rank-position checking requires a paid search-data API (we use provider keys like SerpApi or DataForSEO on client engagements) because Google doesn't allow this to run reliably or fairly from a browser. Two ways to get it:</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <span class="tag">Self-serve</span>
+        <h3>Bring your own API key</h3>
+        <p>If you already hold a rank-tracking API key, paste it below with your domain and target keyword. The key stays in this browser tab only — it's never sent to Arcadia Crew Marketing.</p>
+        <div class="field-row" style="margin-top:16px;">
+          <input type="text" id="rankKey" placeholder="API key (e.g. SerpApi)">
+        </div>
+        <div class="field-row" style="margin-top:10px;">
+          <input type="text" id="rankKeyword" placeholder="Target keyword">
+        </div>
+        <div style="margin-top:14px;">
+          <button class="btn btn-ghost" id="rankBtn" type="button">Check position</button>
+        </div>
+        <p class="tool-note" id="rankNote">Not configured yet — see the note above.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Managed</span>
+        <h3>We set it up for you</h3>
+        <p>On paid engagements, Arcadia Crew Marketing configures and maintains rank tracking as part of the build — no key management on your end, results reviewed with you on a schedule.</p>
+        <a href="contact.html" class="btn btn-primary" style="margin-top:16px;">Ask about rank tracking →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-grid">
+    <div>
+      <div class="footer-brand">Arcadia Crew Marketing</div>
+      <p style="margin-top:8px; max-width:36ch;">SEO audits, site diagnostics, and the eCommerce builds that fix what they find.</p>
+    </div>
+    <nav class="footer-links">
+      <a href="tools.html">SEO Tools</a>
+      <a href="services.html">Services</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+  <div class="wrap footer-meta">© <span id="yr"></span> Arcadia Crew Marketing · info@arcadiacrewmarketing.com</div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
