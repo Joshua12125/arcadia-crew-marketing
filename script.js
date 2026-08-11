@@ -37,7 +37,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const rankBtn = document.getElementById('rankBtn');
   if (rankBtn) rankBtn.addEventListener('click', runRankCheck);
+
+  const gbpBtn = document.getElementById('gbpBtn');
+  if (gbpBtn) gbpBtn.addEventListener('click', runGbpCheck);
 });
+
+// Optional: paste a free Google PageSpeed Insights API key here to avoid
+// the strict rate limits Google applies to unauthenticated requests.
+// Get one at https://console.cloud.google.com/apis/credentials
+// (enable "PageSpeed Insights API", no billing required for normal use).
+const PAGESPEED_API_KEY = '';
 
 function normalizeUrl(raw) {
   let u = raw.trim();
@@ -47,6 +56,16 @@ function normalizeUrl(raw) {
     return new URL(u).toString();
   } catch (e) {
     return null;
+  }
+}
+
+async function fetchWithTimeout(url, ms = 20000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(id);
   }
 }
 
@@ -82,14 +101,20 @@ async function runScan() {
 
   const [mobileRes, desktopRes, onpageRes] = results;
   let anySuccess = false;
+  const failures = [];
 
   if (mobileRes.status === 'fulfilled') {
     setScore('scoreMobile', mobileRes.value);
     anySuccess = true;
+  } else {
+    failures.push(`Mobile speed: ${mobileRes.reason?.message || 'request failed'}`);
   }
+
   if (desktopRes.status === 'fulfilled') {
     setScore('scoreDesktop', desktopRes.value);
     anySuccess = true;
+  } else {
+    failures.push(`Desktop speed: ${desktopRes.reason?.message || 'request failed'}`);
   }
 
   if (onpageRes.status === 'fulfilled') {
@@ -97,11 +122,15 @@ async function runScan() {
     anySuccess = true;
   } else {
     renderOnPageError();
+    failures.push(`On-page scan: ${onpageRes.reason?.message || 'request failed'}`);
+  }
+
+  if (failures.length) {
+    errorBox.innerHTML = failures.map(f => `<div>${f}</div>`).join('');
+    errorBox.classList.add('show');
   }
 
   if (!anySuccess) {
-    errorBox.textContent = "Couldn't reach that site or the diagnostic services right now. Double-check the URL and try again in a moment.";
-    errorBox.classList.add('show');
     return;
   }
 
@@ -117,22 +146,49 @@ function setScore(elId, score) {
 }
 
 async function fetchPageSpeed(url, strategy) {
-  const endpoint = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=${strategy}&category=performance`;
-  const res = await fetch(endpoint);
-  if (!res.ok) throw new Error('PageSpeed request failed');
+  let endpoint = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=${strategy}&category=performance`;
+  if (PAGESPEED_API_KEY) endpoint += `&key=${PAGESPEED_API_KEY}`;
+
+  let res;
+  try {
+    res = await fetchWithTimeout(endpoint, 25000);
+  } catch (e) {
+    throw new Error(e.name === 'AbortError' ? 'timed out' : 'network error reaching Google');
+  }
+  if (res.status === 429) throw new Error('rate limited by Google (add a free API key to fix this)');
+  if (!res.ok) throw new Error(`Google returned an error (${res.status})`);
   const data = await res.json();
   const score = data?.lighthouseResult?.categories?.performance?.score;
-  if (score === undefined || score === null) throw new Error('No score returned');
+  if (score === undefined || score === null) throw new Error(data?.error?.message || 'no score returned — the URL may be unreachable by Google');
   return Math.round(score * 100);
 }
 
 async function fetchOnPage(url) {
-  // Uses a public read-only CORS proxy since most sites don't send
+  // Uses public read-only CORS proxies since most sites don't send
   // Access-Control-Allow-Origin headers for direct browser fetches.
-  const proxied = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-  const res = await fetch(proxied);
-  if (!res.ok) throw new Error('Could not fetch page HTML');
-  const html = await res.text();
+  // Tries a primary proxy, then a fallback, since free proxies are flaky.
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(url)}`
+  ];
+
+  let html = null;
+  let lastError = null;
+
+  for (const proxied of proxies) {
+    try {
+      const res = await fetchWithTimeout(proxied, 20000);
+      if (!res.ok) { lastError = `proxy returned ${res.status}`; continue; }
+      html = await res.text();
+      if (html && html.length > 200) break;
+      lastError = 'proxy returned an empty page';
+      html = null;
+    } catch (e) {
+      lastError = e.name === 'AbortError' ? 'proxy timed out' : 'proxy unreachable';
+    }
+  }
+
+  if (!html) throw new Error(lastError || 'could not fetch page HTML');
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
@@ -258,5 +314,34 @@ async function runRankCheck() {
     note.textContent = 'Provider responded — wire this result into your report as needed.';
   } catch (e) {
     note.textContent = 'This provider blocks direct browser requests (expected — API keys shouldn\'t live in client-side code). Rank tracking needs a small backend endpoint; we set this up as part of paid engagements.';
+  }
+}
+
+async function runGbpCheck() {
+  const note = document.getElementById('gbpNote');
+  const key = document.getElementById('gbpKey').value.trim();
+  const business = document.getElementById('gbpBusiness').value.trim();
+  const keyword = document.getElementById('gbpKeyword').value.trim();
+
+  if (!key || !business || !keyword) {
+    note.textContent = 'Add an API key, your business name, and a target keyword to check a local position.';
+    return;
+  }
+
+  note.textContent = 'Checking…';
+  try {
+    // Same constraint as rank tracking above: local-pack/Maps search-data
+    // providers don't allow direct browser requests with a live key.
+    // This is a best-effort attempt — expect it to fail client-side.
+    const res = await fetch(`https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)}&api_key=${encodeURIComponent(key)}`);
+    if (!res.ok) throw new Error('blocked');
+    const data = await res.json();
+    const results = data?.local_results || [];
+    const match = results.findIndex(r => (r.title || '').toLowerCase().includes(business.toLowerCase()));
+    note.textContent = match >= 0
+      ? `Found at local pack position ${match + 1} for "${keyword}".`
+      : `Not found in the top local results returned for "${keyword}".`;
+  } catch (e) {
+    note.textContent = 'This provider blocks direct browser requests (expected — API keys shouldn\'t live in client-side code). Grid-based local rank tracking needs a small backend endpoint; we set this up as part of local SEO engagements.';
   }
 }
