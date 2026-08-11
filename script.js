@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // the strict rate limits Google applies to unauthenticated requests.
 // Get one at https://console.cloud.google.com/apis/credentials
 // (enable "PageSpeed Insights API", no billing required for normal use).
-const PAGESPEED_API_KEY = '';
+const PAGESPEED_API_KEY = 'AIzaSyA1Ee18SAIyJ4JKwryYMTYIs0ZByOrlt1o';
 
 function normalizeUrl(raw) {
   let u = raw.trim();
