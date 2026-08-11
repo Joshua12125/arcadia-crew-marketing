@@ -196,6 +196,25 @@ async function fetchPageSpeed(url, strategy) {
 }
 
 async function fetchOnPage(url) {
+  // Preferred path: our own Vercel serverless function fetches the HTML
+  // server-side — no CORS, no third-party proxy, no bot-blocking on the
+  // proxy's IP. Falls back to public proxies only if /api/scan isn't
+  // available (e.g. running the static files without Vercel).
+  try {
+    const res = await fetchWithTimeout(`/api/scan?url=${encodeURIComponent(url)}`, 15000);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      if (data.checks) return data;
+    }
+  } catch (e) {
+    // fall through to proxy fallback below
+  }
+
+  return fetchOnPageViaProxy(url);
+}
+
+async function fetchOnPageViaProxy(url) {
   // Uses public read-only CORS proxies since most sites don't send
   // Access-Control-Allow-Origin headers for direct browser fetches.
   // Tries a primary proxy, then a fallback, since free proxies are flaky.
