@@ -183,7 +183,7 @@ async function fetchPageSpeed(url, strategy) {
 
   let res;
   try {
-    res = await fetchWithTimeout(endpoint, 18000);
+    res = await fetchWithTimeout(endpoint, 28000);
   } catch (e) {
     throw new Error(e.name === 'AbortError' ? 'timed out' : 'network error reaching Google');
   }
@@ -225,19 +225,23 @@ async function fetchOnPageViaProxy(url) {
   ];
 
   const attempts = proxies.map(async (proxied) => {
-    const res = await fetchWithTimeout(proxied, 10000);
-    if (!res.ok) throw new Error(`proxy returned ${res.status}`);
-    const html = await res.text();
-    if (!html || html.length < 200) throw new Error('proxy returned an empty page');
-    return html;
+    try {
+      const res = await fetchWithTimeout(proxied, 12000);
+      if (!res.ok) throw new Error(`proxy returned ${res.status}`);
+      const html = await res.text();
+      if (!html || html.length < 200) throw new Error('proxy returned an empty page');
+      return html;
+    } catch (e) {
+      throw new Error(e.name === 'AbortError' ? 'proxy timed out' : (e.message || 'proxy unreachable'));
+    }
   });
 
   let html;
   try {
     html = await Promise.any(attempts);
   } catch (aggregate) {
-    const reason = aggregate.errors?.[0]?.message || 'could not fetch page HTML';
-    throw new Error(reason);
+    const reasons = (aggregate.errors || []).map(e => e.message).filter(Boolean);
+    throw new Error(reasons[0] || 'could not fetch page HTML');
   }
 
   const parser = new DOMParser();
