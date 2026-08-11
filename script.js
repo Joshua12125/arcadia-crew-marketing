@@ -88,7 +88,6 @@ async function runScan() {
   loadingRow.classList.add('show');
   document.getElementById('scoreMobile').textContent = '–';
   document.getElementById('scoreDesktop').textContent = '–';
-  document.getElementById('scoreOnpage').textContent = '–';
   document.getElementById('scoreOverall').textContent = '–';
   document.getElementById('overallNote').textContent = '';
   document.getElementById('onpageList').innerHTML = '';
@@ -330,7 +329,6 @@ async function fetchOnPageViaProxy(url) {
 }
 
 function renderOnPage(result) {
-  setScore('scoreOnpage', result.score);
   const list = document.getElementById('onpageList');
   list.innerHTML = '';
   result.checks.forEach(c => {
